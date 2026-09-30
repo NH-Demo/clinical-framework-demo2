@@ -94,5 +94,5 @@ body:
           required: false
         - label: "Mark PR as 'Ready for review' and assign clinical lead(s) for sign-off"
           required: false
-        - label: "Ensure this issue is closed by writing Closes #IssueNumber in the PR Description box. IssueNumber can be found in the address bar or next to the issue title"
+        - label: "Ensure this issue is closed by writing 'Closes #IssueNumber' in the PR Description box. Issue number can be found in the address bar or next to the issue title"
           required: false
