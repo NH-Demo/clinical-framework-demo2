@@ -1,0 +1,98 @@
+name: "Clinical Protocol & Guideline Update"
+description: "Propose an update, clarification, or revision to any clinical protocol or SOP"
+title: "[Protocol Update]: "
+labels: ["status: clinical discussion"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Clinical Protocol Intake & Review
+        Use this form to initiate protocol discussions, guideline revisions, or clinical operational updates. 
+        The assigned clinician (PIC) is responsible for moderating this discussion and driving the resulting Pull Request.
+
+  - type: input
+    id: lead_pic
+    attributes:
+      label: Assigned Clinical Lead (Person in Charge / PIC)
+      description: "Tag the primary doctor responsible for leading this task to completion."
+      placeholder: "@DoctorA"
+    validations:
+      required: true
+
+  - type: input
+    id: clinical_topic
+    attributes:
+      label: Protocol Subject / Clinical Topic
+      description: "State the document, clinical condition, diagnostic test, or operational area affected."
+      placeholder: "e.g., T2D Management Protocol, Reagent B Handling, Hypertension Staging, Lab Referral Criteria"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: request_type
+    attributes:
+      label: Nature of Revision
+      options:
+        - "Routine Protocol Review / Periodic Update"
+        - "New Clinical Evidence / Guideline Change"
+        - "Diagnostic Criteria / Reference Range Revision"
+        - "Safety, Contraindication, or Adverse Event Flag"
+        - "Operational / Workflow Clarification"
+        - "Other Clinical Topic"
+    validations:
+      required: true
+
+  - type: textarea
+    id: affected_files
+    attributes:
+      label: Target Document(s) / Existing Files
+      description: "List the repository file path(s) or link existing protocols if known."
+      placeholder: "e.g., docs/protocols/cardiology/lipid_panel.md"
+    validations:
+      required: false
+
+  - type: textarea
+    id: proposed_changes
+    attributes:
+      label: Proposed Updates or Clinical Questions
+      description: "Summarize the current guidance and the proposed changes or clarifications needed."
+      placeholder: "Outline the specific sections to amend, dosage updates, or procedural steps..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: rationale_evidence
+    attributes:
+      label: Clinical Rationale, Guidelines & References
+      description: "Detail the clinical justification and cite relevant sources (e.g., NICE, ESC, WHO, internal audit findings)."
+      placeholder: "Cite relevant guideline updates, committee recommendations, or trial data..."
+    validations:
+      required: true
+
+  - type: input
+    id: collaborators
+    attributes:
+      label: Contributing Clinicians
+      description: "Tag other doctors to invite them to this discussion thread."
+      placeholder: "@DoctorB @DoctorC @DoctorD"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: pic_responsibilities
+    attributes:
+      label: Assigned Lead (PIC) Responsibilities
+      description: "The assigned lead should complete these milestones before final submission."
+      options:
+        - label: "Moderate clinical discussion with contributing clinicians in the comments below"
+          required: false
+        - label: "Confirm clinical consensus on required text amendments"
+          required: false
+        - label: "Prepare draft Pull Request (or request coordinator to generate Copilot draft)"
+          required: false
+        - label: "Review Pull Request diff under 'Files changed' to ensure medical accuracy"
+          required: false
+        - label: "Mark PR as 'Ready for review' and assign Tom/Nick for sign-off"
+          required: false
+        - label: "Ensure this issue is closed upon merge"
+          required: false
