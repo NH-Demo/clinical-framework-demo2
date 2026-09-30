@@ -1,0 +1,82 @@
+name: Clinical Governance Auto-Labeler
+
+on:
+  issues:
+    types: [opened, assigned]
+  issue_comment:
+    types: [created]
+  pull_request:
+    types: [opened, closed, review_requested]
+
+jobs:
+  label-sync:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      # Helper function to swap status labels cleanly
+      - name: Update Labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const statusLabels = [
+              'status: clinical discussion',
+              'status: ready for drafting',
+              'status: draft in progress',
+              'status: awaiting clinical review',
+              'status: approved'
+            ];
+
+            async function replaceStatus(targetNumber, newLabel, isPR = false) {
+              const repoInfo = { owner: context.repo.owner, repo: context.repo.repo, issue_number: targetNumber };
+              
+              // 1. Fetch existing labels
+              const current = await github.rest.issues.get(repoInfo);
+              const existing = current.data.labels.map(l => l.name);
+
+              // 2. Remove any previous status labels
+              for (const lbl of existing) {
+                if (statusLabels.includes(lbl) && lbl !== newLabel) {
+                  try {
+                    await github.rest.issues.removeLabel({ ...repoInfo, name: lbl });
+                  } catch (e) {}
+                }
+              }
+
+              // 3. Add the target status label
+              if (!existing.includes(newLabel)) {
+                await github.rest.issues.addLabels({ ...repoInfo, labels: [newLabel] });
+              }
+            }
+
+            const event = context.eventName;
+            const action = context.payload.action;
+
+            // Trigger 1: Issue opened or assigned to doctor -> status: clinical discussion
+            if (event === 'issues' && (action === 'opened' || action === 'assigned')) {
+              await replaceStatus(context.issue.number, 'status: clinical discussion');
+            }
+
+            // Trigger 2: Clinician reaches consensus in issue comment -> status: ready for drafting
+            if (event === 'issue_comment' && action === 'created') {
+              const body = context.payload.comment.body.toLowerCase();
+              if (body.includes('ready for draft') || body.includes('consensus reached') || body.includes('approved from my side')) {
+                await replaceStatus(context.issue.number, 'status: ready for drafting');
+              }
+            }
+
+            // Trigger 3: Draft PR is opened -> status: draft in progress
+            if (event === 'pull_request' && action === 'opened') {
+              await replaceStatus(context.payload.pull_request.number, 'status: draft in progress', true);
+            }
+
+            // Trigger 4: PR review requested from Nick/Tom -> status: awaiting clinical review
+            if (event === 'pull_request' && action === 'review_requested') {
+              await replaceStatus(context.payload.pull_request.number, 'status: awaiting clinical review', true);
+            }
+
+            // Trigger 5: PR is approved and merged -> status: approved
+            if (event === 'pull_request' && action === 'closed' && context.payload.pull_request.merged === true) {
+              await replaceStatus(context.payload.pull_request.number, 'status: approved', true);
+            }
