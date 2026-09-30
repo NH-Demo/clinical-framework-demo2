@@ -1,5 +1,4 @@
-# Demo script (delete this file before sharing with clinicians)
-
+# Demo script 
 ## Sample questions to create through the form
 1. **Vitamin D** — Two reference ranges are in circulation. Which one goes in the framework? Destination: Clinical framework.
 2. **Ferritin** — Do we need to know menstrual cycle phase to interpret ferritin? Destination: Both (framework + product needs to collect cycle data).
