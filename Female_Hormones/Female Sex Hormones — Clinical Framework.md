@@ -71,7 +71,7 @@ Glycoprotein hormone synthesized and secreted by the anterior pituitary gland. R
 
 | Cohort / Cycle Phase | Reference Lower | Reference Upper | Flagging Rule |
 | :--- | :--- | :--- | :--- |
-| Follicular Phase | 3.5 | 12.5 | Flag R2 if > 15.0 |
+| Follicular Phase | 3.5 | 12.5 | Flag R2 if > 18.0 |
 | Ovulatory Peak | 4.7 | 21.5 | Physiological spike expected |
 | Luteal Phase | 1.7 | 7.7 | Flag R1 if > 10.0 |
 | Postmenopausal | 25.8 | 134.8 | Flag R2 if < 20.0 (unconfirmed) |
