@@ -1,0 +1,62 @@
+name: Clinical Decision Question
+description: Submit an open clinical question or data observation for lead review
+title: "[Area] Topic / Marker (ID)"
+labels: ["status: clinical discussion", "priority: High"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please fill out the clinical observation details below to initiate review.
+  - type: input
+    id: question_id
+    attributes:
+      label: Question ID
+      description: Identifier from the open questions register (e.g., SANGRA-PROG-01).
+      placeholder: "e.g., SANGRA-PROG-01"
+    validations:
+      required: true
+  - type: dropdown
+    id: clinical_area
+    attributes:
+      label: Clinical Area
+      options:
+        - Female Hormones
+        - Male Hormones & PSA
+        - Thyroid, Cardiac & Nutritional
+        - Other / Cross-Panel
+    validations:
+      required: true
+  - type: input
+    id: marker_topic
+    attributes:
+      label: Marker or Topic
+      placeholder: "e.g., Progesterone threshold ceiling"
+    validations:
+      required: true
+  - type: textarea
+    id: data_mismatch
+    attributes:
+      label: The Data Mismatch & Observation
+      description: Detail expected rates vs observed data and sample sizes.
+      placeholder: |
+        Expected: ...
+        Observed so far: ...
+        What is happening: ...
+    validations:
+      required: true
+  - type: textarea
+    id: decisions_needed
+    attributes:
+      label: Decision Needed from Clinical Lead
+      placeholder: |
+        1. Confirm removal or modification of ...
+        2. Advise on next steps for ...
+    validations:
+      required: true
+  - type: checkboxes
+    id: sign_off_checklist
+    attributes:
+      label: Triage & Sign-off Tracking
+      options:
+        - label: Clinical review completed
+        - label: Decision recorded in thread
