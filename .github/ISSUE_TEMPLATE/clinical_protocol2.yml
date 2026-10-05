@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Describe the question or change below, then discuss with colleagues in the comments.
-        When the discussion is finished, tag @YOUR-USERNAME and the framework update will be handled for you.
+        When the discussion is finished, tag @elena and the framework update will be handled for you.
         ⚠️ No patient data: describe cases anonymously.
   - type: input
     id: topic
@@ -36,8 +36,8 @@ body:
   - type: textarea
     id: evidence
     attributes:
-      label: Reasoning or references (optional)
+      label: Reasoning or references 
   - type: input
     id: lead
     attributes:
-      label: Who should lead this discussion? (optional)
+      label: Who should lead this discussion? 
