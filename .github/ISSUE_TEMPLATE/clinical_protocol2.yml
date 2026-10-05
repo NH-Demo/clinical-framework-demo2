@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Describe the question or change below, then discuss with colleagues in the comments.
-        When the discussion is finished, tag @elena and the framework update will be handled for you.
+        When the discussion is finished, tag @elena-bui and the framework update will be handled for you.
         ⚠️ No patient data: describe cases anonymously.
   - type: input
     id: topic
