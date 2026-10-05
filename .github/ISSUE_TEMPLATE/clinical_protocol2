@@ -1,0 +1,43 @@
+name: "Clinical question or update"
+description: "Raise a question, or propose a change to the clinical framework"
+title: "[Topic]: "
+labels: ["open"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the question or change below, then discuss with colleagues in the comments.
+        When the discussion is finished, tag @YOUR-USERNAME and the framework update will be handled for you.
+        ⚠️ No patient data: describe cases anonymously.
+  - type: input
+    id: topic
+    attributes:
+      label: Topic
+      placeholder: "e.g. Vitamin D reference range, Female hormone panel"
+    validations:
+      required: true
+  - type: dropdown
+    id: type
+    attributes:
+      label: What kind of request is this?
+      options:
+        - Question that needs a decision
+        - Change to the framework
+        - New evidence or guideline
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: What's the question or proposed change?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Reasoning or references (optional)
+  - type: input
+    id: lead
+    attributes:
+      label: Who should lead this discussion? (optional)
