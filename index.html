@@ -19,40 +19,71 @@
     const REPO_NAME = "clinical-framework-demo2";
 
     function App() {
-      const [issues, setIssues] = useState([]);
+      const [items, setItems] = useState([]);
       const [loading, setLoading] = useState(true);
       const [error, setError] = useState(null);
       const [filter, setFilter] = useState('All');
 
-      const fetchIssues = async () => {
+      const fetchData = async () => {
         setLoading(true);
         setError(null);
         try {
-          const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/issues?state=all&per_page=30`);
-          if (!res.ok) throw new Error(`GitHub API returned ${res.status}: ${res.statusText}`);
-          const raw = await res.json();
-          
-          const parsed = raw
+          // Fetch both issues and pull requests concurrently
+          const [issuesRes, pullsRes] = await Promise.all([
+            fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/issues?state=open&per_page=30`),
+            fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/pulls?state=open&per_page=30`)
+          ]);
+
+          if (!issuesRes.ok) throw new Error(`Issues API: ${issuesRes.statusText}`);
+          if (!pullsRes.ok) throw new Error(`Pulls API: ${pullsRes.statusText}`);
+
+          const rawIssues = await issuesRes.json();
+          const rawPulls = await pullsRes.json();
+
+          // GitHub's /issues endpoint returns PRs too; filter them out here to avoid duplicate entries
+          const pureIssues = rawIssues
             .filter(item => !item.pull_request)
             .map(issue => {
-              const isClosed = issue.state === 'closed';
-              const isUrgent = issue.labels.some(l => l.name.toLowerCase().includes('urgent') || l.name.toLowerCase().includes('priority'));
               const areaLabel = issue.labels.find(l => l.name.toLowerCase().startsWith('area:') || l.name.toLowerCase().startsWith('clinical:'));
-
+              const isUrgent = issue.labels.some(l => l.name.toLowerCase().includes('urgent') || l.name.toLowerCase().includes('priority'));
+              
               return {
                 id: issue.number,
+                type: 'Issue',
                 title: issue.title,
-                isOpen: !isClosed,
-                status: isClosed ? 'Approved / Closed' : isUrgent ? 'Overdue' : 'Pending Review',
-                category: areaLabel ? areaLabel.name.split(':')[1]?.trim() : 'Guideline Review',
+                status: isUrgent ? 'Overdue' : 'Pending Review',
+                category: areaLabel ? areaLabel.name.split(':')[1]?.trim() : 'Guideline Issue',
                 assignee: issue.assignee ? issue.assignee.login : 'Unassigned',
                 email: issue.assignee ? `${issue.assignee.login}@nekohealth.com` : 'tom@nekohealth.com',
                 dueDate: issue.milestone?.due_on ? issue.milestone.due_on.split('T')[0] : 'Rolling Review',
-                githubUrl: issue.html_url,
+                url: issue.html_url,
                 body: issue.body || 'No description provided.'
               };
             });
-          setIssues(parsed);
+
+          // Map Pull Requests (extracting requested reviewers)
+          const purePulls = rawPulls.map(pr => {
+            const reviewer = pr.requested_reviewers && pr.requested_reviewers.length > 0
+              ? pr.requested_reviewers[0].login
+              : (pr.assignee ? pr.assignee.login : pr.user.login);
+
+            return {
+              id: pr.number,
+              type: 'Pull Request',
+              title: pr.title,
+              status: 'PR Sign-off Needed',
+              category: 'Guideline PR',
+              assignee: reviewer,
+              email: `${reviewer}@nekohealth.com`,
+              dueDate: pr.milestone?.due_on ? pr.milestone.due_on.split('T')[0] : 'Branch Review',
+              url: pr.html_url,
+              body: pr.body || 'No PR description provided.'
+            };
+          });
+
+          // Combine both, sorted by number descending
+          const combined = [...pureIssues, ...purePulls].sort((a, b) => b.id - a.id);
+          setItems(combined);
         } catch (err) {
           setError(err.message);
         } finally {
@@ -61,19 +92,19 @@
       };
 
       useEffect(() => {
-        fetchIssues();
+        fetchData();
       }, []);
 
-      const getTeamsDeepLink = (issue) => {
-        const text = `Hi ${issue.assignee}, quick review reminder on MedX Issue #${issue.id} ("${issue.title}"). Guideline link awaiting clinical sign-off: ${issue.githubUrl}`;
-        return `https://teams.microsoft.com/l/chat/0/0?users=${encodeURIComponent(issue.email)}&message=${encodeURIComponent(text)}`;
+      const getTeamsDeepLink = (item) => {
+        const text = `Hi ${item.assignee}, quick review reminder on MedX ${item.type} #${item.id} ("${item.title}"). Here is the clinical guideline link awaiting sign-off: ${item.url}`;
+        return `https://teams.microsoft.com/l/chat/0/0?users=${encodeURIComponent(item.email)}&message=${encodeURIComponent(text)}`;
       };
 
-      const filteredIssues = issues.filter(issue => {
+      const filteredItems = items.filter(item => {
         if (filter === 'All') return true;
-        if (filter === 'Open') return issue.isOpen;
-        if (filter === 'Closed') return !issue.isOpen;
-        return issue.status === filter;
+        if (filter === 'Issues') return item.type === 'Issue';
+        if (filter === 'PRs') return item.type === 'Pull Request';
+        return true;
       });
 
       return (
@@ -87,11 +118,11 @@
                 <span className="text-slate-400 text-xs font-mono">{REPO_OWNER}/{REPO_NAME}</span>
               </div>
               <h1 className="text-2xl font-bold text-slate-900 mt-1">MedX Clinical Review Board</h1>
-              <p className="text-sm text-slate-500">Live guideline approval queue and 1-click Teams reminder assistant.</p>
+              <p className="text-sm text-slate-500">Live tracker for pending Issues and Pull Request sign-offs.</p>
             </div>
 
             <button
-              onClick={fetchIssues}
+              onClick={fetchData}
               disabled={loading}
               className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium px-3.5 py-2 rounded-lg transition-colors flex items-center gap-2"
             >
@@ -99,8 +130,9 @@
             </button>
           </header>
 
+          {/* Quick Filter */}
           <div className="flex gap-2 bg-slate-200/60 p-1 rounded-xl w-fit text-xs font-medium text-slate-600">
-            {['All', 'Open', 'Closed'].map(tab => (
+            {['All', 'Issues', 'PRs'].map(tab => (
               <button
                 key={tab}
                 onClick={() => setFilter(tab)}
@@ -114,69 +146,63 @@
           </div>
 
           {loading ? (
-            <div className="p-12 text-center text-slate-400 text-sm">Fetching issues from GitHub...</div>
+            <div className="p-12 text-center text-slate-400 text-sm">Fetching Issues and PRs from GitHub...</div>
           ) : error ? (
             <div className="bg-rose-50 text-rose-700 p-4 rounded-xl text-sm border border-rose-200">
-              Error loading issues: {error}
+              Error loading: {error}
             </div>
-          ) : filteredIssues.length === 0 ? (
+          ) : filteredItems.length === 0 ? (
             <div className="bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-500">
-              No issues match the selected filter.
+              No open issues or pull requests found.
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredIssues.map(issue => (
-                <div key={issue.id} className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+              {filteredItems.map(item => (
+                <div key={`${item.type}-${item.id}`} className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 border-b border-slate-100 pb-3">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-mono font-semibold text-slate-400">#{issue.id}</span>
-                      <span className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-medium">
-                        {issue.category}
-                      </span>
-                      <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
-                        !issue.isOpen
-                          ? 'bg-slate-100 text-slate-600'
-                          : issue.status === 'Overdue'
-                          ? 'bg-rose-100 text-rose-700'
-                          : 'bg-amber-100 text-amber-700'
+                      <span className={`text-xs px-2 py-0.5 rounded font-mono font-semibold ${
+                        item.type === 'Pull Request' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-700'
                       }`}>
-                        {issue.status}
+                        {item.type === 'Pull Request' ? 'PR' : 'Issue'} #{item.id}
+                      </span>
+                      <span className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-medium">
+                        {item.category}
+                      </span>
+                      <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">
+                        {item.status}
                       </span>
                     </div>
 
                     <a
-                      href={issue.githubUrl}
+                      href={item.url}
                       target="_blank"
                       rel="noreferrer"
                       className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
                     >
-                      View in GitHub ↗
+                      View on GitHub ↗
                     </a>
                   </div>
 
                   <div className="mt-3">
-                    <h2 className="text-base font-semibold text-slate-900">{issue.title}</h2>
-                    <p className="text-xs text-slate-500 line-clamp-2 mt-1">{issue.body}</p>
+                    <h2 className="text-base font-semibold text-slate-900">{item.title}</h2>
+                    <p className="text-xs text-slate-500 line-clamp-2 mt-1">{item.body}</p>
                   </div>
 
                   <div className="mt-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pt-2">
                     <div className="flex items-center gap-3 text-xs text-slate-600">
-                      <span className="bg-slate-100 px-2 py-1 rounded">👤 {issue.assignee}</span>
-                      <span>Target: {issue.dueDate}</span>
+                      <span className="bg-slate-100 px-2 py-1 rounded">👤 {item.assignee}</span>
+                      <span>Target: {item.dueDate}</span>
                     </div>
 
-                    {issue.isOpen ? (
-                      <a
-                        href={getTeamsDeepLink(issue)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium px-3.5 py-2 rounded-lg transition-colors shadow-sm"
-                      >
-                        <span>💬</span> Nudge in Teams
-                      </a>
-                    ) : (
-                      <span className="text-xs text-emerald-600 font-medium">✓ Sign-off Complete</span>
-                    )}
+                    <a
+                      href={getTeamsDeepLink(item)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium px-3.5 py-2 rounded-lg transition-colors shadow-sm"
+                    >
+                      <span>💬</span> Nudge in Teams
+                    </a>
                   </div>
                 </div>
               ))}
