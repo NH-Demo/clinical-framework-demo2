@@ -1,0 +1,51 @@
+name: Notify Doctor Invitation and Join Events
+
+on:
+  member:
+    types: [added]
+
+jobs:
+  notify-teams:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Alert Teams of Member Join
+        env:
+          TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+        run: |
+          DOCTOR="${{ github.event.member.login }}"
+          REPO="${{ github.repository }}"
+          
+          JSON_PAYLOAD=$(cat <<EOF
+          {
+            "type": "message",
+            "attachments": [
+              {
+                "contentType": "application/vnd.microsoft.card.adaptive",
+                "content": {
+                  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                  "type": "AdaptiveCard",
+                  "version": "1.4",
+                  "body": [
+                    {
+                      "type": "TextBlock",
+                      "text": "🎉 Doctor Joined Repository",
+                      "weight": "Bolder",
+                      "size": "Medium",
+                      "color": "Good"
+                    },
+                    {
+                      "type": "TextBlock",
+                      "text": "**@${DOCTOR}** has accepted the invitation and is now an active reviewer on **${REPO}**.",
+                      "wrap": true
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+          EOF
+          )
+          
+          curl -H "Content-Type: application/json" \
+            -d "$JSON_PAYLOAD" \
+            $TEAMS_WEBHOOK_URL
