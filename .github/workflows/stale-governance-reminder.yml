@@ -2,9 +2,7 @@ name: Stale Clinical Review Escalation
 
 on:
   schedule:
-    # Runs Monday through Friday at 08:00 UTC (morning European time)
     - cron: '0 8 * * 1-5'
-  # Allows on-demand testing anytime
   workflow_dispatch:
 
 jobs:
@@ -17,13 +15,10 @@ jobs:
           TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
         run: |
           REPO="${{ github.repository }}"
-          
-          # Date cutoff: exactly 7 days ago in UTC ISO format
           STALE_DATE=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)
+
           echo "Scanning for open issues updated prior to: $STALE_DATE"
 
-          # Query GitHub API for open issues sorted by least recently updated
-          # Selects only real issues (ignoring Pull Requests) updated before the cutoff
           STALE_ISSUES=$(gh api "repos/${REPO}/issues?state=open&sort=updated&direction=asc&per_page=50" \
             --jq "[.[] | select(.pull_request == null and .updated_at < \"$STALE_DATE\")]")
 
@@ -35,14 +30,12 @@ jobs:
             exit 0
           fi
 
-          # Iterate through each stale issue and send an Adaptive Card to Teams
           echo "$STALE_ISSUES" | jq -c '.[]' | while read -r issue; do
             NUMBER=$(echo "$issue" | jq -r '.number')
             TITLE=$(echo "$issue" | jq -r '.title')
             URL=$(echo "$issue" | jq -r '.html_url')
             UPDATED_AT=$(echo "$issue" | jq -r '.updated_at')
-            
-            # Extract first assignee login handle; fallback to Unassigned if empty
+
             ASSIGNEE=$(echo "$issue" | jq -r '.assignees[0].login // empty')
             if [ -z "$ASSIGNEE" ]; then
               ASSIGNEE_TEXT="Unassigned"
@@ -52,79 +45,65 @@ jobs:
               DOCTOR_EMAIL="${ASSIGNEE}@nekohealth.com"
             fi
 
-            # Calculate days since last update
             UPDATED_EPOCH=$(date -d "$UPDATED_AT" +%s)
             NOW_EPOCH=$(date +%s)
             DAYS_AGO=$(( (NOW_EPOCH - UPDATED_EPOCH) / 86400 ))
 
-            # Prepare URL-encoded Teams message
             MSG_TEXT="Hi Dr. ${ASSIGNEE}, Issue #${NUMBER} (${TITLE}) is awaiting clinical sign-off and has been inactive for ${DAYS_AGO} days. Could you please review it here: ${URL}"
             ENCODED_MSG=$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))" "$MSG_TEXT")
-            
             TEAMS_NUDGE_URL="https://teams.microsoft.com/l/chat/0/0?users=${DOCTOR_EMAIL}&message=${ENCODED_MSG}"
 
-            # Assemble action buttons
+            CARD_TITLE="⚠️ Stale Review Alert: ${DAYS_AGO} Days Inactive"
+            CARD_BODY="**Issue #${NUMBER}:** ${TITLE}\n\n**Assignee:** ${ASSIGNEE_TEXT}\n**Last Updated:** ${DAYS_AGO} days ago"
+
             if [ -n "$DOCTOR_EMAIL" ]; then
-              ACTIONS_JSON=$(cat <<ACTIONS_EOF
-              [
-                {
-                  "type": "Action.OpenUrl",
-                  "title": "Open Issue in GitHub",
-                  "url": "${URL}"
-                },
-                {
-                  "type": "Action.OpenUrl",
-                  "title": "Nudge Doctor in Teams",
-                  "url": "${TEAMS_NUDGE_URL}"
-                }
-              ]
-ACTIONS_EOF
-              )
+              ACTIONS=$(jq -n \
+                --arg url "$URL" \
+                --arg nudge "$TEAMS_NUDGE_URL" \
+                '[
+                  {"type": "Action.OpenUrl", "title": "Open Issue in GitHub", "url": $url},
+                  {"type": "Action.OpenUrl", "title": "Nudge Doctor in Teams", "url": $nudge}
+                ]')
             else
-              ACTIONS_JSON=$(cat <<ACTIONS_EOF
-              [
-                {
-                  "type": "Action.OpenUrl",
-                  "title": "Open Issue in GitHub",
-                  "url": "${URL}"
-                }
-              ]
-ACTIONS_EOF
-              )
+              ACTIONS=$(jq -n \
+                --arg url "$URL" \
+                '[
+                  {"type": "Action.OpenUrl", "title": "Open Issue in GitHub", "url": $url}
+                ]')
             fi
 
-            # Build full Teams Adaptive Card payload
-            PAYLOAD=$(cat <<EOF
-            {
-              "type": "message",
-              "attachments": [
-                {
-                  "contentType": "application/vnd.microsoft.card.adaptive",
-                  "content": {
-                    "\$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-                    "type": "AdaptiveCard",
-                    "version": "1.4",
-                    "body": [
-                      {
-                        "type": "TextBlock",
-                        "text": "⚠️ Stale Review Alert: ${DAYS_AGO} Days Inactive",
-                        "weight": "Bolder",
-                        "size": "Medium",
-                        "color": "Attention"
-                      },
-                      {
-                        "type": "TextBlock",
-                        "text": "**Issue #${NUMBER}:** ${TITLE}\n\n**Assignee:** ${ASSIGNEE_TEXT}\n**Last Updated:** ${DAYS_AGO} days ago",
-                        "wrap": true
-                      }
-                    ],
-                    "actions": ${ACTIONS_JSON}
+            PAYLOAD=$(jq -n \
+              --arg title "$CARD_TITLE" \
+              --arg body "$CARD_BODY" \
+              --argjson actions "$ACTIONS" \
+              '{
+                "type": "message",
+                "attachments": [
+                  {
+                    "contentType": "application/vnd.microsoft.card.adaptive",
+                    "content": {
+                      "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                      "type": "AdaptiveCard",
+                      "version": "1.4",
+                      "body": [
+                        {
+                          "type": "TextBlock",
+                          "text": $title,
+                          "weight": "Bolder",
+                          "size": "Medium",
+                          "color": "Attention"
+                        },
+                        {
+                          "type": "TextBlock",
+                          "text": $body,
+                          "wrap": true
+                        }
+                      ],
+                      "actions": $actions
+                    }
                   }
-                }
-              ]
-            }
-EOF
-            )
+                ]
+              }')
 
             echo "Sending alert for Issue #${NUMBER} to Teams..."
             curl -s -H "Content-Type: application/json" -d "$PAYLOAD" "$TEAMS_WEBHOOK_URL"
