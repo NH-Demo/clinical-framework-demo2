@@ -3,6 +3,12 @@ name: Notify Doctor Invitation and Join Events
 on:
   member:
     types: [added]
+  workflow_dispatch:
+    inputs:
+      test_doctor:
+        description: 'Doctor username for testing'
+        required: false
+        default: 'sarah.lind'
 
 jobs:
   notify-teams:
@@ -12,7 +18,13 @@ jobs:
         env:
           TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
         run: |
-          DOCTOR="${{ github.event.member.login }}"
+          # Use manual test input if triggered via workflow_dispatch, otherwise use the real event payload
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            DOCTOR="${{ github.event.inputs.test_doctor }}"
+          else
+            DOCTOR="${{ github.event.member.login }}"
+          fi
+
           REPO="${{ github.repository }}"
           
           JSON_PAYLOAD=$(cat <<EOF
@@ -22,7 +34,7 @@ jobs:
               {
                 "contentType": "application/vnd.microsoft.card.adaptive",
                 "content": {
-                  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                  "\$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
                   "type": "AdaptiveCard",
                   "version": "1.4",
                   "body": [
@@ -48,4 +60,4 @@ jobs:
           
           curl -H "Content-Type: application/json" \
             -d "$JSON_PAYLOAD" \
-            $TEAMS_WEBHOOK_URL
+            "$TEAMS_WEBHOOK_URL"
