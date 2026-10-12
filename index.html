@@ -18,6 +18,42 @@
     const REPO_OWNER = "NH-Demo";
     const REPO_NAME = "clinical-framework-demo2";
 
+    /**
+     * Extracts and standardizes dates written in the issue body.
+     * Supports:
+     * - 2026-10-16 (ISO)
+     * - 16 Oct 2026 / 16 October 2026 / Oct 16 2026
+     * - 16/10/2026 / 16-10-2026 / 16.10.2026 (DD/MM/YYYY)
+     */
+    function parseIssueDeadline(bodyText) {
+      if (!bodyText) return null;
+
+      const match = bodyText.match(/(?:due|deadline):\s*([^\r\n]+)/i);
+      if (!match) return null;
+
+      const raw = match[1].trim();
+
+      // Standard text or ISO formats
+      let parsed = new Date(raw);
+      if (!isNaN(parsed.getTime())) {
+        return parsed.toISOString().split('T')[0];
+      }
+
+      // DD/MM/YYYY, DD-MM-YYYY, or DD.MM.YYYY
+      const dmyMatch = raw.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/);
+      if (dmyMatch) {
+        const day = dmyMatch[1].padStart(2, '0');
+        const month = dmyMatch[2].padStart(2, '0');
+        const year = dmyMatch[3];
+        parsed = new Date(`${year}-${month}-${day}`);
+        if (!isNaN(parsed.getTime())) {
+          return `${year}-${month}-${day}`;
+        }
+      }
+
+      return null;
+    }
+
     function App() {
       const [items, setItems] = useState([]);
       const [loading, setLoading] = useState(true);
@@ -42,22 +78,31 @@
           const pureIssues = rawIssues
             .filter(item => !item.pull_request)
             .map(issue => {
-              const areaLabel = issue.labels.find(l => l.name.toLowerCase().startsWith('area:') || l.name.toLowerCase().startsWith('clinical:'));
-              const isUrgent = issue.labels.some(l => l.name.toLowerCase().includes('urgent') || l.name.toLowerCase().includes('priority'));
+              const areaLabel = issue.labels.find(l => 
+                l.name.toLowerCase().startsWith('area:') || 
+                l.name.toLowerCase().startsWith('clinical:')
+              );
+              const isUrgent = issue.labels.some(l => 
+                l.name.toLowerCase().includes('urgent') || 
+                l.name.toLowerCase().includes('priority')
+              );
               
               const updatedDate = new Date(issue.updated_at);
               const now = new Date();
               const daysInactive = Math.floor((now - updatedDate) / (1000 * 60 * 60 * 24));
-              
+
+              const extractedDueDate = parseIssueDeadline(issue.body);
+              const isPastDeadline = extractedDueDate ? new Date(extractedDueDate) < now : false;
+
               return {
                 id: issue.number,
                 type: 'Issue',
                 title: issue.title,
-                status: isUrgent ? 'Overdue' : 'Pending Review',
+                status: (isPastDeadline || isUrgent) ? 'Overdue' : 'Pending Review',
                 category: areaLabel ? areaLabel.name.split(':')[1]?.trim() : 'Guideline Issue',
                 assignee: issue.assignee ? issue.assignee.login : 'Unassigned',
                 email: issue.assignee ? `${issue.assignee.login}@nekohealth.com` : 'tom@nekohealth.com',
-                dueDate: issue.milestone?.due_on ? issue.milestone.due_on.split('T')[0] : 'Rolling Review',
+                dueDate: extractedDueDate || (issue.milestone?.due_on ? issue.milestone.due_on.split('T')[0] : 'Rolling Review'),
                 url: issue.html_url,
                 body: issue.body || 'No description provided.',
                 daysInactive: daysInactive,
@@ -74,15 +119,18 @@
             const now = new Date();
             const daysInactive = Math.floor((now - updatedDate) / (1000 * 60 * 60 * 24));
 
+            const extractedDueDate = parseIssueDeadline(pr.body);
+            const isPastDeadline = extractedDueDate ? new Date(extractedDueDate) < now : false;
+
             return {
               id: pr.number,
               type: 'Pull Request',
               title: pr.title,
-              status: 'PR Sign-off Needed',
+              status: isPastDeadline ? 'Overdue' : 'PR Sign-off Needed',
               category: 'Guideline PR',
               assignee: reviewer,
               email: `${reviewer}@nekohealth.com`,
-              dueDate: pr.milestone?.due_on ? pr.milestone.due_on.split('T')[0] : 'Branch Review',
+              dueDate: extractedDueDate || (pr.milestone?.due_on ? pr.milestone.due_on.split('T')[0] : 'Branch Review'),
               url: pr.html_url,
               body: pr.body || 'No PR description provided.',
               daysInactive: daysInactive,
@@ -182,9 +230,17 @@
                       <span className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-medium">
                         {item.category}
                       </span>
-                      <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">
-                        {item.status}
+                      
+                      {/* Dynamic Status Tag */}
+                      <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
+                        item.status === 'Overdue'
+                          ? 'bg-rose-100 text-rose-700 font-semibold border border-rose-200'
+                          : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {item.status === 'Overdue' ? '🚨 Overdue' : item.status}
                       </span>
+
+                      {/* Stale Inactivity Indicator */}
                       {item.isStale && (
                         <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-red-50 text-red-700 border border-red-200 flex items-center gap-1">
                           <span>⚠️</span> Inactive {item.daysInactive}d
