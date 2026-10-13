@@ -18,6 +18,19 @@
     const REPO_OWNER = "NH-Demo";
     const REPO_NAME = "clinical-framework-demo2";
 
+    // Set how many days of inactivity trigger the "Inactive" label and warning styling
+    const INACTIVITY_THRESHOLD_DAYS = 3;
+
+    /**
+     * Converts a GitHub username (e.g. "Elena-bui", "sarah_nolan") 
+     * into a clean, friendly first name: "Elena", "Sarah"
+     */
+    function formatFirstName(username) {
+      if (!username || username === 'Unassigned') return 'there';
+      const rawFirst = username.split(/[-._]/)[0];
+      return rawFirst.charAt(0).toUpperCase() + rawFirst.slice(1).toLowerCase();
+    }
+
     /**
      * Converts any GitHub handle (e.g. "Elena-bui", "sarah_nolan") 
      * to the corporate email format: elena.bui@nekohealth.com
@@ -114,7 +127,7 @@
                 url: issue.html_url,
                 body: issue.body || 'No description provided.',
                 daysInactive: daysInactive,
-                isStale: daysInactive >= 3
+                isStale: daysInactive >= INACTIVITY_THRESHOLD_DAYS
               };
             });
 
@@ -144,7 +157,7 @@
               url: pr.html_url,
               body: pr.body || 'No PR description provided.',
               daysInactive: daysInactive,
-              isStale: daysInactive >= 3
+              isStale: daysInactive >= INACTIVITY_THRESHOLD_DAYS
             };
           });
 
@@ -161,36 +174,34 @@
         fetchData();
       }, []);
 
-      // Builds concise, dynamic reminder message for Teams
+      // Generates the personalized, natural message copy for Teams
       const generateDynamicTemplateMessage = (item) => {
-        const doctorGreeting = item.assignee !== 'Unassigned' ? item.assignee : 'Doctor';
+        const greetingName = formatFirstName(item.assignee);
 
         let urgencyTag = '';
         if (item.isOverdue) {
           urgencyTag = ` (Overdue, deadline was ${item.dueDate})`;
-        } else if (item.daysInactive >= 3) {
+        } else if (item.daysInactive >= INACTIVITY_THRESHOLD_DAYS) {
           urgencyTag = ` (Unupdated for ${item.daysInactive} days)`;
         }
 
-        return `Hi ${doctorGreeting}, please take a look at ${item.type} #${item.id}: "${item.title}"${urgencyTag}. Clinical sign-off is needed: ${item.url}`;
+        return `Hi ${greetingName}, please take a look at ${item.type} #${item.id}: "${item.title}"${urgencyTag}. Clinical sign-off is needed: ${item.url}`;
       };
 
-      // Opens native Teams client with message pre-filled in draft compose box
+      // Opens native Teams client with message pre-filled in the compose box
       const handleTeamsNudge = (item) => {
         const prefilledText = generateDynamicTemplateMessage(item);
 
-        // Backup copy in case OS blocks deep link text
+        // Copy as an instant backup in case OS limits URL draft lengths
         if (navigator.clipboard) {
           navigator.clipboard.writeText(prefilledText);
         }
 
         showToast("Opening Teams with pre-written message...");
 
-        // Native client protocol triggers the Teams compose box directly
         const desktopDeepLink = `msteams:/l/chat/0/0?users=${encodeURIComponent(item.email)}&message=${encodeURIComponent(prefilledText)}`;
         const webFallbackLink = `https://teams.microsoft.com/l/chat/0/0?users=${encodeURIComponent(item.email)}&message=${encodeURIComponent(prefilledText)}`;
 
-        // Attempt direct desktop client trigger first, with browser web fallback
         const hiddenIframe = document.createElement("iframe");
         hiddenIframe.style.display = "none";
         hiddenIframe.src = desktopDeepLink;
@@ -332,7 +343,7 @@
                       <span className="text-slate-400">Created by: {item.author}</span>
                       <span>Target: {item.dueDate}</span>
                       
-                      {/* Inactivity Tag */}
+                      {/* Last updated / Inactivity Indicator */}
                       <span className="text-slate-500 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
                         🕒 Last updated: {item.daysInactive === 0 ? 'Today' : `${item.daysInactive} day(s) ago`}
                       </span>
