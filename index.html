@@ -161,55 +161,50 @@
         fetchData();
       }, []);
 
-      // Generates dynamic message copy matching the item's live status
+      // Builds concise, dynamic reminder message for Teams
       const generateDynamicTemplateMessage = (item) => {
-        const greetingName = item.assignee !== 'Unassigned' ? item.assignee : 'Team';
+        const doctorGreeting = item.assignee !== 'Unassigned' ? item.assignee : 'Doctor';
 
-        let urgencyDetails = '';
-        if (item.isOverdue && item.daysInactive >= 3) {
-          urgencyDetails = `⚠️ Urgent: This item is overdue (target was ${item.dueDate}) and has been unupdated for ${item.daysInactive} days.`;
-        } else if (item.isOverdue) {
-          urgencyDetails = `⚠️ Note: This item is overdue past its target date (${item.dueDate}).`;
+        let urgencyTag = '';
+        if (item.isOverdue) {
+          urgencyTag = ` (Overdue, deadline was ${item.dueDate})`;
         } else if (item.daysInactive >= 3) {
-          urgencyDetails = `⚠️ Inactive: This item has been unupdated for ${item.daysInactive} days and is waiting on clinical sign-off.`;
-        } else if (item.daysInactive > 0) {
-          urgencyDetails = `Last updated ${item.daysInactive} day(s) ago (target date: ${item.dueDate}).`;
-        } else {
-          urgencyDetails = `Updated today (target date: ${item.dueDate}).`;
+          urgencyTag = ` (Unupdated for ${item.daysInactive} days)`;
         }
 
-        return `[Automatic Message]
-Hi ${greetingName},
-
-Please take a look at ${item.type} #${item.id}: "${item.title}".
-
-${urgencyDetails}
-
-Direct Link:
-${item.url}
-
-Thanks!`;
+        return `Hi ${doctorGreeting}, please take a look at ${item.type} #${item.id}: "${item.title}"${urgencyTag}. Clinical sign-off is needed: ${item.url}`;
       };
 
-      // Copies the dynamic template to clipboard and opens Teams 1-on-1 chat
+      // Opens native Teams client with message pre-filled in draft compose box
       const handleTeamsNudge = (item) => {
-        const templateText = generateDynamicTemplateMessage(item);
+        const prefilledText = generateDynamicTemplateMessage(item);
 
+        // Backup copy in case OS blocks deep link text
         if (navigator.clipboard) {
-          navigator.clipboard.writeText(templateText).then(() => {
-            showToast("Dynamic reminder copied! Opening Teams... Press Ctrl+V to send.");
-          }).catch(() => {
-            showToast("Opening Teams...");
-          });
+          navigator.clipboard.writeText(prefilledText);
         }
 
-        const teamsUrl = `https://teams.microsoft.com/l/chat/0/0?users=${encodeURIComponent(item.email)}`;
-        window.open(teamsUrl, '_blank');
+        showToast("Opening Teams with pre-written message...");
+
+        // Native client protocol triggers the Teams compose box directly
+        const desktopDeepLink = `msteams:/l/chat/0/0?users=${encodeURIComponent(item.email)}&message=${encodeURIComponent(prefilledText)}`;
+        const webFallbackLink = `https://teams.microsoft.com/l/chat/0/0?users=${encodeURIComponent(item.email)}&message=${encodeURIComponent(prefilledText)}`;
+
+        // Attempt direct desktop client trigger first, with browser web fallback
+        const hiddenIframe = document.createElement("iframe");
+        hiddenIframe.style.display = "none";
+        hiddenIframe.src = desktopDeepLink;
+        document.body.appendChild(hiddenIframe);
+
+        setTimeout(() => {
+          document.body.removeChild(hiddenIframe);
+          window.open(webFallbackLink, "_blank");
+        }, 300);
       };
 
       const showToast = (msg) => {
         setToastMessage(msg);
-        setTimeout(() => setToastMessage(null), 4500);
+        setTimeout(() => setToastMessage(null), 4000);
       };
 
       const filteredItems = items.filter(item => {
@@ -223,8 +218,8 @@ Thanks!`;
         <div className="max-w-4xl mx-auto p-6 space-y-6">
           {/* Toast Notification */}
           {toastMessage && (
-            <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs px-4 py-3 rounded-xl shadow-lg border border-slate-700 flex items-center gap-2 animate-bounce">
-              <span>📋</span> {toastMessage}
+            <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs px-4 py-3 rounded-xl shadow-lg border border-slate-700 flex items-center gap-2">
+              <span>💬</span> {toastMessage}
             </div>
           )}
 
@@ -337,7 +332,7 @@ Thanks!`;
                       <span className="text-slate-400">Created by: {item.author}</span>
                       <span>Target: {item.dueDate}</span>
                       
-                      {/* Last updated / Inactivity Indicator */}
+                      {/* Inactivity Tag */}
                       <span className="text-slate-500 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
                         🕒 Last updated: {item.daysInactive === 0 ? 'Today' : `${item.daysInactive} day(s) ago`}
                       </span>
