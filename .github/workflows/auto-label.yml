@@ -2,14 +2,15 @@ name: Clinical Governance Auto-Labeler
 
 on:
   issues:
-    types: [opened, assigned]
+    types: [opened]
   pull_request:
-    types: [opened, closed, review_requested, ready_for_review, converted_to_draft]
+    types: [opened, ready_for_review, converted_to_draft]
+  pull_request_review:
+    types: [submitted]
 
 jobs:
   label-sync:
     runs-on: ubuntu-latest
-    # Prevent concurrent runs on the exact same PR from racing each other
     concurrency:
       group: label-sync-${{ github.event.pull_request.number || github.event.issue.number }}
       cancel-in-progress: false
@@ -23,10 +24,9 @@ jobs:
           script: |
             const statusLabels = [
               'status: clinical discussion',
-              'status: ready for drafting',
               'status: draft in progress',
               'status: awaiting clinical review',
-              'status: approved'
+              'status: awaiting merge'
             ];
 
             async function replaceStatus(targetNumber, newLabel) {
@@ -51,26 +51,31 @@ jobs:
             const event = context.eventName;
             const action = context.payload.action;
 
-            // 1. Issues: Opened or Doctor Assigned
-            if (event === 'issues' && (action === 'opened' || action === 'assigned')) {
+            // 1. Issue created -> status: clinical discussion
+            if (event === 'issues' && action === 'opened') {
               await replaceStatus(context.issue.number, 'status: clinical discussion');
             }
 
-            // 2. PR Logic
+            // 2. PR created or state toggled
             if (event === 'pull_request') {
               const pr = context.payload.pull_request;
               const prNumber = pr.number;
 
-              // Merged
-              if (action === 'closed' && pr.merged === true) {
-                await replaceStatus(prNumber, 'status: approved');
-              }
-              // Active Draft (either opened as draft, or converted back to draft)
-              else if (pr.draft === true) {
+              if (pr.draft === true) {
+                // PR draft created (or converted to draft) -> status: draft in progress
                 await replaceStatus(prNumber, 'status: draft in progress');
-              }
-              // Ready for Review / Not a draft (opened ready, marked ready, or review requested)
-              else if (action === 'opened' || action === 'ready_for_review' || action === 'review_requested') {
+              } else {
+                // PR submitted (opened directly as ready, or marked ready for review) -> awaiting clinical review
                 await replaceStatus(prNumber, 'status: awaiting clinical review');
+              }
+            }
+
+            // 3. PR is approved -> awaiting merge
+            if (event === 'pull_request_review' && action === 'submitted') {
+              const review = context.payload.review;
+              const prNumber = context.payload.pull_request.number;
+
+              if (review.state === 'approved') {
+                await replaceStatus(prNumber, 'status: awaiting merge');
               }
             }
