@@ -22,7 +22,7 @@ on:
       doctor_name:
         description: 'Doctor username'
         required: false
-        default: 'sarah.lind'
+        default: 'Elena-bui'
       item_title:
         description: 'Title of Issue/PR or Context'
         required: false
@@ -37,104 +37,166 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Send Adaptive Card Alert to Teams
+        uses: actions/github-script@v7
         env:
           TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
-        run: |
-          REPO="${{ github.repository }}"
-          INVITE_URL="https://github.com/${REPO}/invitations"
-
-          # 1. Resolve Trigger Source
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            EVENT_TYPE="${{ github.event.inputs.event_type }}"
-            DOCTOR="${{ github.event.inputs.doctor_name }}"
-            TITLE_TEXT="${{ github.event.inputs.item_title }}"
-            TARGET_URL="${{ github.event.inputs.item_url }}"
-          elif [ "${{ github.event_name }}" = "issues" ]; then
-            EVENT_TYPE="Assigned to Issue"
-            DOCTOR="${{ github.event.assignee.login }}"
-            TITLE_TEXT="${{ github.event.issue.title }}"
-            TARGET_URL="${{ github.event.issue.html_url }}"
-          elif [ "${{ github.event_name }}" = "pull_request" ]; then
-            EVENT_TYPE="Assigned to Issue"
-            DOCTOR="${{ github.event.requested_reviewer.login || github.event.assignee.login }}"
-            TITLE_TEXT="${{ github.event.pull_request.title }}"
-            TARGET_URL="${{ github.event.pull_request.html_url }}"
-          elif [ "${{ github.event_name }}" = "member" ]; then
-            EVENT_TYPE="Doctor Joined"
-            DOCTOR="${{ github.event.member.login }}"
-            TITLE_TEXT=""
-            TARGET_URL="https://github.com/${REPO}"
-          fi
-
-          # 2. Build Event-Specific Copy
-          if [ "$EVENT_TYPE" = "Invitation Sent" ]; then
-            CARD_TITLE="📋 Clinical Reviewer Access Invited"
-            COLOR="Accent"
-            MSG="Dr. **@${DOCTOR}** has been invited to collaborate on **${REPO}**.\n\n**Direct Link to Forward:**\n\`${INVITE_URL}\`\n\n*If Dr. @${DOCTOR} misses the GitHub email, copy the link above and drop it directly in their 1-on-1 Teams chat.*"
-            BTN_TEXT="Open Acceptance Page"
-            BTN_URL="${INVITE_URL}"
-
-          elif [ "$EVENT_TYPE" = "Doctor Joined" ]; then
-            CARD_TITLE="🎉 Doctor Joined Repository"
-            COLOR="Good"
-            MSG="Dr. **@${DOCTOR}** has accepted the invitation and is now an active reviewer on **${REPO}**."
-            BTN_TEXT="Open Repository"
-            BTN_URL="https://github.com/${REPO}"
-
-          elif [ "$EVENT_TYPE" = "Assigned to Issue" ]; then
-            CARD_TITLE="📌 Clinical Task Assigned"
-            COLOR="Warning"
-            MSG="Dr. **@${DOCTOR}**, you have been assigned as the clinical reviewer for:\n\n**${TITLE_TEXT}**\n\n**Direct Link:**\n\`${TARGET_URL}\`"
-            BTN_TEXT="Open Item in GitHub"
-            BTN_URL="${TARGET_URL}"
-
-          elif [ "$EVENT_TYPE" = "Doctor Mentioned" ]; then
-            CARD_TITLE="💬 Clinical Discussion Mention"
-            COLOR="Accent"
-            MSG="Dr. **@${DOCTOR}**, you were mentioned in a clinical discussion regarding:\n\n**${TITLE_TEXT}**\n\n**Direct Link:**\n\`${TARGET_URL}\`"
-            BTN_TEXT="View Comment"
-            BTN_URL="${TARGET_URL}"
-          fi
-
-          # 3. Deliver Adaptive Card to Teams
-          JSON_PAYLOAD=$(cat <<EOF
-          {
-            "type": "message",
-            "attachments": [
-              {
-                "contentType": "application/vnd.microsoft.card.adaptive",
-                "content": {
-                  "\$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-                  "type": "AdaptiveCard",
-                  "version": "1.4",
-                  "body": [
-                    {
-                      "type": "TextBlock",
-                      "text": "${CARD_TITLE}",
-                      "weight": "Bolder",
-                      "size": "Medium",
-                      "color": "${COLOR}"
-                    },
-                    {
-                      "type": "TextBlock",
-                      "text": "${MSG}",
-                      "wrap": true
-                    }
-                  ],
-                  "actions": [
-                    {
-                      "type": "Action.OpenUrl",
-                      "title": "${BTN_TEXT}",
-                      "url": "${BTN_URL}"
-                    }
-                  ]
-                }
+        with:
+          script: |
+            // 1. Team Directory: Map GitHub handles to Corporate Teams Identity
+            const userDirectory = {
+              'Elena-bui': {
+                name: 'Elena Bui',
+                email: 'elena.bui@nekohealth.com'
+              },
+              'sarah-nolan-test': {
+                name: 'Dr. Sarah Nolan',
+                email: 'sarah.nolan@nekohealth.com'
+              },
+              'elenabui-se': {
+                name: 'Elena Bui',
+                email: 'elena.bui@nekohealth.com'
+              },
+              'buildingfor100': {
+                name: 'Tom',
+                email: 'tom@nekohealth.com'
               }
-            ]
-          }
-          EOF
-          )
+              // Add any additional colleagues here as needed
+            };
 
-          curl -H "Content-Type: application/json" \
-            -d "$JSON_PAYLOAD" \
-            "$TEAMS_WEBHOOK_URL"
+            const repo = context.payload.repository ? context.payload.repository.full_name : `${context.repo.owner}/${context.repo.repo}`;
+            const inviteUrl = `https://github.com/${repo}/invitations`;
+
+            let eventType = '';
+            let doctor = '';
+            let titleText = '';
+            let targetUrl = '';
+
+            // 2. Resolve Event Context
+            if (context.eventName === 'workflow_dispatch') {
+              eventType = context.payload.inputs.event_type;
+              doctor = context.payload.inputs.doctor_name;
+              titleText = context.payload.inputs.item_title;
+              targetUrl = context.payload.inputs.item_url;
+            } else if (context.eventName === 'issues') {
+              eventType = 'Assigned to Issue';
+              doctor = context.payload.assignee ? context.payload.assignee.login : '';
+              titleText = context.payload.issue ? context.payload.issue.title : '';
+              targetUrl = context.payload.issue ? context.payload.issue.html_url : '';
+            } else if (context.eventName === 'pull_request') {
+              eventType = 'Assigned to Issue';
+              doctor = (context.payload.requested_reviewer && context.payload.requested_reviewer.login) || 
+                       (context.payload.assignee && context.payload.assignee.login) || '';
+              titleText = context.payload.pull_request ? context.payload.pull_request.title : '';
+              targetUrl = context.payload.pull_request ? context.payload.pull_request.html_url : '';
+            } else if (context.eventName === 'member') {
+              eventType = 'Doctor Joined';
+              doctor = context.payload.member ? context.payload.member.login : '';
+              titleText = '';
+              targetUrl = `https://github.com/${repo}`;
+            }
+
+            // 3. Resolve Mentions and Entities for Teams
+            let mentionTag = `@${doctor}`;
+            let entities = [];
+
+            if (userDirectory[doctor]) {
+              const matchedUser = userDirectory[doctor];
+              mentionTag = `<at>${matchedUser.name}</at>`;
+              entities.push({
+                type: 'mention',
+                text: `<at>${matchedUser.name}</at>`,
+                mentioned: {
+                  id: matchedUser.email,
+                  name: matchedUser.name
+                }
+              });
+            }
+
+            // 4. Build Event Copy
+            let cardTitle = '';
+            let color = 'Default';
+            let msg = '';
+            let btnText = 'Open in GitHub';
+            let btnUrl = targetUrl || `https://github.com/${repo}`;
+
+            if (eventType === 'Invitation Sent') {
+              cardTitle = '📋 Clinical Reviewer Access Invited';
+              color = 'Accent';
+              msg = `Dr. **${mentionTag}** has been invited to collaborate on **${repo}**.\n\n**Direct Link to Forward:**\n\`${inviteUrl}\`\n\n*If Dr. ${mentionTag} misses the GitHub email, copy the link above and drop it directly in their 1-on-1 Teams chat.*`;
+              btnText = 'Open Acceptance Page';
+              btnUrl = inviteUrl;
+            } else if (eventType === 'Doctor Joined') {
+              cardTitle = '🎉 Doctor Joined Repository';
+              color = 'Good';
+              msg = `Dr. **${mentionTag}** has accepted the invitation and is now an active reviewer on **${repo}**.`;
+              btnText = 'Open Repository';
+              btnUrl = `https://github.com/${repo}`;
+            } else if (eventType === 'Assigned to Issue') {
+              cardTitle = '📌 Clinical Task Assigned';
+              color = 'Warning';
+              msg = `Dr. **${mentionTag}**, you have been assigned as the clinical reviewer for:\n\n**${titleText}**\n\n**Direct Link:**\n\`${targetUrl}\``;
+              btnText = 'Open Item in GitHub';
+              btnUrl = targetUrl;
+            } else if (eventType === 'Doctor Mentioned') {
+              cardTitle = '💬 Clinical Discussion Mention';
+              color = 'Accent';
+              msg = `Dr. **${mentionTag}**, you were mentioned in a clinical discussion regarding:\n\n**${titleText}**\n\n**Direct Link:**\n\`${targetUrl}\``;
+              btnText = 'View Comment';
+              btnUrl = targetUrl;
+            }
+
+            // 5. Build Adaptive Card Payload
+            const cardPayload = {
+              type: 'message',
+              attachments: [
+                {
+                  contentType: 'application/vnd.microsoft.card.adaptive',
+                  content: {
+                    $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
+                    type: 'AdaptiveCard',
+                    version: '1.4',
+                    body: [
+                      {
+                        type: 'TextBlock',
+                        text: cardTitle,
+                        weight: 'Bolder',
+                        size: 'Medium',
+                        color: color
+                      },
+                      {
+                        type: 'TextBlock',
+                        text: msg,
+                        wrap: true
+                      }
+                    ],
+                    actions: [
+                      {
+                        type: 'Action.OpenUrl',
+                        title: btnText,
+                        url: btnUrl
+                      }
+                    ],
+                    msteams: {
+                      entities: entities
+                    }
+                  }
+                }
+              ]
+            };
+
+            // 6. Deliver to Webhook
+            const webhookUrl = process.env.TEAMS_WEBHOOK_URL;
+            if (!webhookUrl) {
+              throw new Error('TEAMS_WEBHOOK_URL secret is not defined.');
+            }
+
+            const response = await fetch(webhookUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(cardPayload)
+            });
+
+            if (!response.ok) {
+              const errText = await response.text();
+              throw new Error(`Teams Webhook failed with status ${response.status}: ${errText}`);
+            }
