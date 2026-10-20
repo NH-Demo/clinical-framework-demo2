@@ -42,7 +42,7 @@ To support programmatic triage and user interface displays, every reported bioma
 | Risk Code | Display Label | Definition | Action Trigger |
 | :--- | :--- | :--- | :--- |
 | **R0** | Optimal | Within physiological reference limits for stated phase[cite: 1]. | Informative only; routine maintenance. |
-| **R1** | Borderline | Minor variance; within 10% of lower or upper bounds. | Retest in 3 to 6 months if symptomatic. |
+| **R1** | Borderline | Minor variance; within 10% of lower or upper bounds. | Retest in 4 to 6 months if symptomatic. |
 | **R2** | Moderate Risk | Out-of-range value suggestive of endocrine dysregulation. | Secondary review; lifestyle and primary care follow-up. |
 | **R3** | High Risk | Significant abnormality indicating potential pathology. | Physician consultation recommended within 14 days. |
 | **R4** | Critical | Acute or extreme endocrine derangement. | Urgent communication (T4/T5 escalation). |
