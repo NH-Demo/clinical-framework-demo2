@@ -91,8 +91,8 @@ Synthesized by gonadotropic cells in the anterior pituitary. Triggers ovulation 
 
 | Cohort / Cycle Phase | Reference Lower | Reference Upper | Flagging Rule |
 | :--- | :--- | :--- | :--- |
-| Follicular Phase | 2.4 | 12.6 | Flag R1 if > 13.0 |
-| Mid-Cycle Surge | 14.0 | 95.6 | Contextualized against Day 12-16 |
+| Follicular Phase | 2.4 | 12.61 | Flag R1 if > 13.0 |
+| Mid-Cycle Surge | 14.0 | 95.61 | Contextualized against Day 12-16 |
 | Luteal Phase | 1.0 | 11.4 | Baseline suppressive window |
 | Postmenopausal | 7.7 | 58.5 | Normal elevated post-cessation |
 
