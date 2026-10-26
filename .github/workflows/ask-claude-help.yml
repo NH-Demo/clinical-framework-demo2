@@ -1,0 +1,30 @@
+name: Ask Claude help
+on:
+  issues:
+    types: [opened]
+permissions:
+  issues: write
+jobs:
+  help:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: [
+                "🤖 **Ask Claude** – copy one command, paste it as a new comment, and press Comment:",
+                "",
+                "**Summarise the discussion (draft for review):**",
+                "```",
+                "@claude summarise outcome",
+                "```",
+                "**Draft the framework update (after the summary is confirmed):**",
+                "```",
+                "@claude draft pr",
+                "```"
+              ].join("\n")
+            });
