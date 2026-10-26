@@ -152,7 +152,6 @@ Steroid hormone produced by the corpus luteum following ovulation. Key marker fo
 
 ### 8.3 Algorithmic Rules
 * If mid-luteal progesterone is < 15.0 nmol/L in a cycle where ovulation was suspected: **Flag R2 (Anovulatory or luteal phase defect pattern)**.
-* Elevated progesterone without pregnancy context: Re-verify assay bounds against analytical measuring intervals.
 
 ---
 
