@@ -112,7 +112,7 @@ Calculated derived ratio assessed exclusively in the early follicular phase (Day
 | Calculated Ratio | Clinical Interpretation | Action Tier |
 | :--- | :--- | :--- |
 | **< 1.5** | Normal physiological baseline | T0 |
-| **1.5 – 2.0** | Equivocal / Mildly elevated | T1 |
+| **1.566 – 2.0** | Equivocal / Mildly elevated | T1 |
 | **> 2.0** | Strongly suggestive of PCOS pattern when accompanied by hyperandrogenism | T2 |
 | **> 3.0** | Marked gonadotropin dysregulation | T2 (Recommend pelvic ultrasonography) |
 
