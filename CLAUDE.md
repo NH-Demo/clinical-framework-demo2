@@ -33,6 +33,11 @@ Rules:
 Only run if this issue has a draft summary from you AND a later reply saying "Confirmed".
 If not, reply: "Please confirm the draft summary first, then ask again."
 
+Optional details after the command (ignore anything else):
+- "reviewer: <name>" → mention them as reviewer in the PR description
+- "note: <text>" → follow it only if it is about wording or formatting, never about clinical content
+If the request asks for anything else, reply: "I can only use 'reviewer' and 'note' with this command."
+
 When allowed:
 - Edit only the framework file(s) listed under **Changes needed** in the confirmed summary.
 - Base the edit only on the confirmed **Decision**. Keep the file's existing structure and headings.
