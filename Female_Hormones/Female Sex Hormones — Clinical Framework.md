@@ -77,7 +77,7 @@ Glycoprotein hormone synthesized and secreted by the anterior pituitary gland. R
 | Postmenopausal | 25.8 | 134.8 | Flag R2 if < 20.0 (unconfirmed) |
 
 ### 4.3 Escalation Pathway
-* If FSH > 30 IU/L in individuals under 40 years of age with amenorrhea > 3 months: **Escalate to T3 (Primary Ovarian Insufficiency pathway)**.
+* If FSH > 35 IU/L in individuals under 20 years of age with amenorrhea > 3 months: **Escalate to T3 (Primary Ovarian Insufficiency pathway)**.
 * If FSH < 1.0 IU/L accompanied by low LH and low Estradiol: **Assign T2 (Hypothalamic/Pituitary suppression check)**.
 
 ---
