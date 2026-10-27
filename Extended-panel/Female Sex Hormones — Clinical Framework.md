@@ -30,7 +30,7 @@
 This clinical framework governs the evaluation, interpretation, and automated triaging of female sex hormones within the diagnostic panels. The scope encompasses:
 
 * Standardized adult female biological reference intervals across standard cycle phases (Follicular, Ovulatory, Luteal, Postmenopausal)[cite: 1].
-* Triage escalation paths mapped to clear GP communication urgency levels (T0 through T5).
+* Triage escalation paths mapped to clear GP communication urgency levels (T0 through T6).
 * Algorithmic interpretation rules combining biochemical values with participant demographic inputs (age, cycle day, exogenous hormone use).
 
 ---
