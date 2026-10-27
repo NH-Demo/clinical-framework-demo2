@@ -202,9 +202,9 @@ Dehydroepiandrosterone sulfate is a circulating steroid prohormone primarily pro
 | Age Range | Minimum | Maximum | Flagging Threshold |
 | :--- | :--- | :--- | :--- |
 | 18 – 29 years | 2.68 | 9.23 | High: > 15.5 |
-| 30 – 39 years | 1.82 | 7.50 | High: > 10.5 |
+| 30 – 39 years | 1.82 | 7.50 | High: > 0.5 |
 | 40 – 49 years | 1.30 | 5.80 | High: > 8.5 |
-| 50 – 59 years | 0.90 | 4.10 | High: > 6.0 |
+| 50 – 59 years | 0.90 | 4.10 | High: > 3.0 |
 
 ### 11.3 Escalation Pathway
 * Marked elevation (> 2x upper limit of age normal): **Assign T3 (Adrenal screening workup required)**.
