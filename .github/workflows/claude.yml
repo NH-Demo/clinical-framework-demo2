@@ -6,9 +6,11 @@ on:
     types: [created]
 jobs:
   claude:
+    # Only these commands start Claude. Any other @claude comment is ignored.
     if: >
       startsWith(github.event.comment.body, '@claude summarise outcome') ||
-      startsWith(github.event.comment.body, '@claude draft pr')
+      startsWith(github.event.comment.body, '@claude draft pr') ||
+      startsWith(github.event.comment.body, '@claude revise')
     runs-on: ubuntu-latest
     permissions:
       contents: write
