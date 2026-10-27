@@ -83,5 +83,33 @@ Used when someone has edited a file directly and wants it tidied before review.
 - After committing, reply with a short list of what you changed, and:
   "When you're happy, click 'Ready for review' so Tom is notified."
 
+### "@claude import word"   (inside a pull request that contains an uploaded .docx file)
+Used when a clinician reviewed a framework document in Word instead of GitHub.
+1. Find the .docx file(s) added in THIS pull request. If there is none, reply
+   "I couldn't find a Word file in this pull request." and stop.
+2. Read it with tracked changes and comments:
+   `pandoc "<file.docx>" --track-changes=all -t markdown -o /tmp/word-import.md`
+   Insertions, deletions and comments appear as {.insertion}, {.deletion} and {.comment-start} spans.
+3. If the Word file contains anything that looks like patient data, stop and reply:
+   "⚠️ This Word file may contain patient data. Please remove the file from this pull request."
+4. Find the matching framework file (by its title and headings). If you are not sure which one, ask and stop.
+5. In that framework file, apply ONLY the tracked changes: add what was inserted, remove what was deleted.
+   Keep everything else exactly as it is. Comments are never edits: do not change text because of a comment.
+6. Remove the .docx file from the pull request (`git rm`), then commit and push both changes to this
+   pull request's branch with the message "Import Word review from <reviewer names>".
+7. Reply with ONE comment in this format:
+
+   ## Word review imported
+   **Changes applied** (please check each one):
+   - <section>: "<old text>" → "<new text>" (<reviewer>)
+     Reason: <the reviewer's comment on this change, if any>
+
+   **⚠️ Needs Tom's confirmation:** any change whose comment asks for confirmation (or "None")
+
+   **💬 Comments that need discussion** (no change made):
+   - <section>, on "<text>": "<comment>" (<reviewer>)
+
+   Suggest: "Open an issue for each comment that needs discussion."
+
 ### Any other request
-Reply: "I can only run 'summarise outcome', 'draft pr' or 'revise' in this repo."
+Reply: "I can only run 'summarise outcome', 'draft pr', 'revise' or 'import word' in this repo."
