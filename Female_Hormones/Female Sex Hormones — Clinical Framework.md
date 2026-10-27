@@ -133,7 +133,7 @@ Primary bioactive estrogen produced primarily by the granulosa cells of the ovar
 | Postmenopausal | < 37.0 | 103.0 | R3 if > 150.0 (Unscheduled bleeding risk) |
 
 ### 7.3 Escalation Pathway
-* Postmenopausal participant not on Hormone Replacement Therapy (HRT) presenting with E2 > 150 pmol/L: **Assign T3 priority review**.
+* Postmenopausal participant not on Hormone Replacement Therapy (HRT) presenting with E2 > 150 pmol/L: **Assign T3 priority review**. No this part should be E2 > 170 pmol/L
 
 ---
 
