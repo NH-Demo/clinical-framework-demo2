@@ -133,7 +133,7 @@ Primary bioactive estrogen produced primarily by the granulosa cells of the ovar
 | Postmenopausal | < 37.0 | 103.0 | R3 if > 150.0 (Unscheduled bleeding risk) |
 
 ### 7.3 Escalation Pathway
-* Postmenopausal participant not on Hormone Replacement Therapy (HRT) presenting with E2 > 150 pmol/L: **Assign T3 priority review**.
+* Postmenopausal participant not on Hormone Replacement Therapy (HRT) presenting with E2 > 150 pmol/L: **Assign T3 priority review**. This rule does not apply to members reporting HRT use.
 
 ---
 
@@ -226,6 +226,8 @@ Secreted by lactotroph cells in the anterior pituitary. Critical for identifying
 | Marked Elevation | > 2500 | — | Macroprolactinoma investigation |
 
 ### 12.3 Escalation Pathway
+* Prolactin 500–1000 mIU/L: assign T1 and repeat under rested conditions; if still raised, check macroprolactin and assign T2 if confirmed.
+* Prolactin 1000–1500 mIU/L: repeat with a macroprolactin check straight away; assign T2 if confirmed.
 * Prolactin > 1500 mIU/L without known pharmacological etiology: **Escalate to T3 / Direct Clinical Notification**.
 
 ---
